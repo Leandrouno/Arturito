@@ -3,12 +3,11 @@
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <IRremote.h>
-#include <IRremoteInt.h>                                             
-IRsend irsend;
+
  
 // Pin donde se conecta el bus 1-Wire
 const int pinDatosDQ =2;
+const int Rele =3;
  
 // Instancia a las clases OneWire y DallasTemperature
 OneWire oneWireObjeto(pinDatosDQ);
@@ -52,7 +51,8 @@ void setup()
 {
 Serial.begin(9600);
 sensorDS18B20.begin(); 
-
+pinMode(Rele,OUTPUT);
+digitalWrite(Rele, HIGH);
 lcd.begin(16, 2);              // start the LCD library
 lcd.setCursor(0,0);            // move cursor to beginning of line "0"
 lcd.print("Temperatura"); // print a simple message
@@ -157,9 +157,9 @@ if(t > cons+3 && estado == 0 && inicio == 1)
 } // FIN LOOP
 
 void power (){
-    irsend.sendNEC(0xA32AB931,32);
-    delay(100);
-    irsend.sendNEC(0xA32AB931,32);
+   digitalWrite(Rele, LOW);
+    delay(300);
+    digitalWrite(Rele, HIGH);
 if(estado == 0){
    Serial.print("Manda Codigo PRENDIDO/////A32AB931/////Temperatura:");}
     else{
