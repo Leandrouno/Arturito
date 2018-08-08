@@ -143,7 +143,7 @@ if(cons > t && estado == 0 && inicio == 0)
   {power(); estado = 1; inicio = 1;}
     else
     if(t>cons+2 && estado == 1 && inicio == 1)
-      {power(); estado = 0;delay(20000);}
+      {power(); estado = 0;}
         else
           if(t<cons-2 && estado == 0 && inicio == 1)
            {power(); estado = 1;}         
@@ -161,7 +161,7 @@ void power (){
     delay(300);
     digitalWrite(Rele, HIGH);
 if(estado == 0){
-   Serial.print("Manda Codigo PRENDIDO/////A32AB931/////Temperatura:");}
+   Serial.print("Manda Codigo PRENDIDO//////////Temperatura:");}
     else{
        Serial.print("Manda Codigo APAGADO //////////Temperatura:");}
 Serial.print(t);Serial.print("Consigna:");Serial.println(cons);
