@@ -1,18 +1,15 @@
 //Sample using LiquidCrystal library
 #include <LiquidCrystal.h>
-
 #include <OneWire.h>
-#include <DallasTemperature.h>
-
- 
+#include <DallasTemperature.h> 
 // Pin donde se conecta el bus 1-Wire
-const int pinDatosDQ =2;
-const int Rele =3;
- 
-// Instancia a las clases OneWire y DallasTemperature
-OneWire oneWireObjeto(pinDatosDQ);
-DallasTemperature sensorDS18B20(&oneWireObjeto);
 
+const int Rele =3;
+#define ONE_WIRE_BUS 2
+// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
+OneWire oneWire(ONE_WIRE_BUS);
+// Pass our oneWire reference to Dallas Temperature. 
+DallasTemperature sensors(&oneWire);
 // select the pins used on the LCD panel
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 
@@ -21,10 +18,11 @@ int backLight   = 10;    // LCD Panel Backlight LED connected to digital pin 10
 int lightLevel  = 255;   // Initialise light full on
 int lcd_key     = 0;
 int adc_key_in  = 0;
-float t =sensorDS18B20.getTempCByIndex(0), tant=0;
+float t =sensors.getTempCByIndex(0), tant=0;
 int cons = t;
 int autom = 0;
-int inicio = 0, estado = 0;
+int inicio = 0, estado = 0, bandera_milis = 0, no_te_pases_che = 0;
+long milis_anteriores = 0;
 #define btnRIGHT  0
 #define btnUP     1
 #define btnDOWN   2
@@ -47,44 +45,51 @@ if (adc_key_in < 790)  return btnSELECT;
 return btnNONE;  // when all others fail, return this...
 }
 
-void setup()
-{
-Serial.begin(9600);
-sensorDS18B20.begin(); 
-pinMode(Rele,OUTPUT);
-digitalWrite(Rele, HIGH);
-lcd.begin(16, 2);              // start the LCD library
-lcd.setCursor(0,0);            // move cursor to beginning of line "0"
-lcd.print("Temperatura"); // print a simple message
-sensorDS18B20.requestTemperatures();
-lcd.clear();
-}
+void setup(){
+            Serial.begin(9600);
+            sensors.begin();
+            pinMode(Rele,OUTPUT);
+            digitalWrite(Rele, HIGH);
+            lcd.begin(16, 2);              // start the LCD library
+            lcd.setCursor(0,0);            // move cursor to beginning of line "0"
+            lcd.print("Temperatura"); // print a simple message
+            lcd.clear();
+            }
 
-void loop()
-{
+void loop(){
 
+if(millis()-milis_anteriores >= 5000) { bandera_milis = 1;  }
+if(bandera_milis == 1){
+                        sensors.requestTemperatures();
+                       // Serial.print("Temperatura: ");
+                       // Serial.println(sensors.getTempCByIndex(0));
+                        t =sensors.getTempCByIndex(0);
+                        milis_anteriores = millis();
+                        bandera_milis = 0;
+                        lcd.clear();
+                      }
+  
 analogWrite(backLight, lightLevel);
 lcd.setCursor(0,0);            // move cursor to beginning of line "0"
 lcd.print("Tempe.");
 lcd.setCursor(9,0);            // move to position 13 on the second line
 lcd.print(t);
-lcd.setCursor(13,1);            
-lcd.print("OFF");
-
+if(autom==0){
+            lcd.setCursor(13,1);            
+            lcd.print("OFF");
+            }
 lcd.setCursor(0,1);            // move cursor to beginning of line "0"
 lcd.print("Consigna");
 lcd.setCursor(9,1);            // move to position 13 on the second line
 lcd.print(cons);
-
 lcd.setCursor(0,1);            // move to the begining of the second line
 lcd_key = read_LCD_buttons();  // read the buttons
-
 switch (lcd_key){
-   case btnRIGHT:{Serial.println("PANTALLA ENCENDIDA");lightLevel = 255;lcd.display();delay(200);break;}
-   case btnLEFT:  {Serial.println("PANTALLA APAGADA"); lightLevel = 1;lcd.noDisplay();delay(200);break;}
+   case btnRIGHT:{/*Serial.println("PANTALLA ENCENDIDA");*/lightLevel = 255;lcd.display();delay(200);break;}
+   case btnLEFT:  {/*Serial.println("PANTALLA APAGADA"); */lightLevel = 1;lcd.noDisplay();delay(200);break;}
     case btnUP:{
-                      Serial.println("BOTON UP");
-                      Serial.print("Consigna:");Serial.println(cons);
+                      //Serial.println("BOTON UP");
+                      //Serial.print("Consigna:");Serial.println(cons);
                       lcd.clear();
                       lcd.display();
                       lightLevel = 255;                            
@@ -93,8 +98,8 @@ switch (lcd_key){
                       lcd.clear();
                       break;}
      case btnDOWN:{    
-                      Serial.println("BOTON DOWN");
-                      Serial.print("Constante:");Serial.println(cons);
+                      //Serial.println("BOTON DOWN");
+                      //Serial.print("Constante:");Serial.println(cons);
                       lcd.clear();
                       lcd.display();
                       lightLevel = 255;                          
@@ -103,13 +108,13 @@ switch (lcd_key){
                       lcd.clear();
                       break;}
    case btnSELECT:  { 
-                          Serial.println("BOTON SELECT");
+                          //Serial.println("BOTON SELECT");
                           lcd.clear();
                           lcd.display();
                           lcd.setCursor(0,0);  
                           lcd.print("Automatico ...");
-                          if(autom==0){Serial.println("MODO AUTOMATICO"); autom=1;} 
-                            else {Serial.println("DESACTIVADO"); autom=0; inicio = 0; if( estado == 1 ){power();estado = 0;}}
+                          if(autom==0){/*Serial.println("MODO AUTOMATICO");*/ autom=1;} 
+                            else {/*Serial.println("DESACTIVADO");*/ autom=0; inicio = 0; if( estado == 1 ){power();estado = 0; no_te_pases_che = 0;}}
                           delay(200);
                           lcd.clear();
                           break;
@@ -118,53 +123,39 @@ switch (lcd_key){
                 }//FIN SWITCH LCD
 
    
-if (autom==1){
-lcd.clear();
-//Serial.println("LOOPEA......"); 
-lcd.setCursor(0,0);            // move cursor to beginning of line "0"
-lcd.print("Tempe.");
-lcd.setCursor(9,0);            // move to position 13 on the second line
-lcd.print(t);
-lcd.setCursor(13,1);            
-lcd.print("ON");
-
-lcd.setCursor(0,1);            // move cursor to beginning of line "0"
-lcd.print("Consigna");
-lcd.setCursor(9,1);            // move to position 13 on the second line
-lcd.print(cons);
+if (autom==1){  
+              lcd.setCursor(0,0);            // move cursor to beginning of line "0"
+              lcd.print("Tempe.");
+              lcd.setCursor(9,0);            // move to position 13 on the second line
+              lcd.print(t);
+              lcd.setCursor(13,1);            
+              lcd.print("ON");
+              lcd.setCursor(0,1);            // move cursor to beginning of line "0"
+              lcd.print("Consigna");
+              lcd.setCursor(9,1);            // move to position 13 on the second line
+              lcd.print(cons);
   
-//  sensorDS18B20.requestTemperatures();
-Serial.print("Temperatura: ");
-Serial.println(sensorDS18B20.getTempCByIndex(0));
-t =sensorDS18B20.getTempCByIndex(0);
-  delay(100);
-
 if(cons > t && estado == 0 && inicio == 0)
   {power(); estado = 1; inicio = 1;}
     else
-    if(t>cons+2 && estado == 1 && inicio == 1)
-      {power(); estado = 0;}
+    if(t>cons+2 && estado == 1 && inicio == 1 && no_te_pases_che == 0)
+      {power(); estado = 0; no_te_pases_che = 1; }
         else
           if(t<cons-2 && estado == 0 && inicio == 1)
-           {power(); estado = 1;}         
+           {power(); estado = 1; no_te_pases_che = 0;}         
 
-if(t > cons+3 && estado == 0 && inicio == 1)
-    estado=1;
-    
-  // tant=t;
-   
+
   }// FIN AUTOMATICO
 } // FIN LOOP
 
 void power (){
-   digitalWrite(Rele, LOW);
-    delay(300);
-    digitalWrite(Rele, HIGH);
-if(estado == 0){
-   Serial.print("Manda Codigo PRENDIDO//////////Temperatura:");}
-    else{
-       Serial.print("Manda Codigo APAGADO //////////Temperatura:");}
-Serial.print(t);Serial.print("Consigna:");Serial.println(cons);
-Serial.println(" ");
-
+              digitalWrite(Rele, LOW);
+              delay(300);
+              digitalWrite(Rele, HIGH);
+              if(estado == 0){
+                              /*Serial.print(" PRENDIDO//////////Temperatura:");*/}
+            else{
+                 /* Serial.print("APAGADO //////////Temperatura:");*/}
+                 /* Serial.print(t);Serial.print("Consigna:");Serial.println(cons);
+                  Serial.println(" ");*/
 }
